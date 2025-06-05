@@ -75,10 +75,17 @@ def get_model_info(model_name: str) -> str:
     try:
         # Get model info
         model_info = odoo_client.get_model_info(model_name)
+        
+        if "error" in model_info:
+            return json.dumps(model_info, indent=2)
 
-        # Get field definitions
-        fields = odoo_client.get_model_fields(model_name)
-        model_info["fields"] = fields
+        # Get field definitions separately
+        try:
+            fields = odoo_client.get_model_fields(model_name)
+            if isinstance(fields, dict) and "error" not in fields:
+                model_info["fields"] = fields
+        except Exception as field_error:
+            model_info["fields_error"] = str(field_error)
 
         return json.dumps(model_info, indent=2)
     except Exception as e:
@@ -103,7 +110,8 @@ def get_record(model_name: str, record_id: str) -> str:
         record = odoo_client.read_records(model_name, [record_id_int])
         if not record:
             return json.dumps(
-                {"error": f"Record not found: {model_name} ID {record_id}"}, indent=2
+                {"error": f"Record not found: {model_name} ID {record_id}"},
+                indent=2
             )
         return json.dumps(record[0], indent=2)
     except Exception as e:
@@ -120,7 +128,7 @@ def search_records_resource(model_name: str, domain: str) -> str:
 
     Parameters:
         model_name: Name of the Odoo model (e.g., 'res.partner')
-        domain: Search domain in JSON format (e.g., '[["name", "ilike", "test"]]')
+        domain: Search domain in JSON format (e.g., '[[\"name\", \"ilike\", \"test\"]]')
     """
     odoo_client = get_odoo_client()
     try:
@@ -317,7 +325,7 @@ def execute_method(
                         except:
                             domain_list = []
 
-                # Xác thực domain_list
+                # Validate domain_list
                 if domain_list:
                     valid_conditions = []
                     for cond in domain_list:
@@ -335,7 +343,7 @@ def execute_method(
 
                     domain_list = valid_conditions
 
-                # Cập nhật args với domain đã chuẩn hóa
+                # Update args with normalized domain
                 normalized_args[0] = domain_list
                 args = normalized_args
 

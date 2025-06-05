@@ -181,15 +181,26 @@ class OdooClient:
             'Contact'
         """
         try:
+            # Primeiro, verifique se o modelo existe usando search
+            model_ids = self._execute(
+                "ir.model",
+                "search",
+                [("model", "=", model_name)]
+            )
+
+            if not model_ids:
+                return {"error": f"Model {model_name} not found"}
+
+            # Depois, leia os dados do modelo usando read em vez de search_read
             result = self._execute(
                 "ir.model",
-                "search_read",
-                [("model", "=", model_name)],
-                {"fields": ["name", "model"]},
+                "read",
+                model_ids,
+                ["name", "model"]
             )
 
             if not result:
-                return {"error": f"Model {model_name} not found"}
+                return {"error": f"Model {model_name} found but could not read data"}
 
             return result[0]
         except Exception as e:
