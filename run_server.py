@@ -76,7 +76,7 @@ def main() -> int:
                 else:
                     logger.info(f"  {key}: {odoo_vars[key]}")
         
-        # Run server in stdio mode like the official examples
+        # Run server in stdio mode
         async def arun():
             logger.info("Starting MCP server...")
             async with stdio_server() as streams:
