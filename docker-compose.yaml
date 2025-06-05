@@ -1,0 +1,9 @@
+services:
+  mcp_server:
+    build: .
+    image: odoo_mcp_server
+    container_name: odoo_mcp_server
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
