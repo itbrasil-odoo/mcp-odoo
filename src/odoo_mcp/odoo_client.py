@@ -65,7 +65,7 @@ class OdooClient:
 
     def _connect(self):
         """Initialize the XML-RPC connection and authenticate"""
-        # Tạo transport với timeout phù hợp
+        # Create transport with appropriate timeout
         is_https = self.url.startswith("https://")
         transport = RedirectTransport(
             timeout=self.timeout, use_https=is_https, verify_ssl=self.verify_ssl
@@ -78,7 +78,7 @@ class OdooClient:
             file=os.sys.stderr,
         )
 
-        # Thiết lập endpoints
+        # Setup endpoints
         self._common = xmlrpc.client.ServerProxy(
             f"{self.url}/xmlrpc/2/common", transport=transport
         )
@@ -86,7 +86,7 @@ class OdooClient:
             f"{self.url}/xmlrpc/2/object", transport=transport
         )
 
-        # Xác thực và lấy user ID
+        # Authenticate and get user ID
         print(
             f"Authenticating with database: {self.db}, username: {self.username}",
             file=os.sys.stderr,
@@ -101,6 +101,7 @@ class OdooClient:
             )
             if not self.uid:
                 raise ValueError("Authentication failed: Invalid username or password")
+            print(f"Authentication successful! User ID: {self.uid}", file=os.sys.stderr)
         except (socket.error, socket.timeout, ConnectionError, TimeoutError) as e:
             print(f"Connection error: {str(e)}", file=os.sys.stderr)
             raise ConnectionError(f"Failed to connect to Odoo server: {str(e)}")
@@ -315,25 +316,29 @@ class RedirectTransport(xmlrpc.client.Transport):
 
         if use_https and not verify_ssl:
             import ssl
-
+            print(f"SSL verification disabled, creating unverified context", file=os.sys.stderr)
             self.context = ssl._create_unverified_context()
 
     def make_connection(self, host):
         if self.proxy:
             proxy_url = urllib.parse.urlparse(self.proxy)
+            print(f"Using proxy: {self.proxy}", file=os.sys.stderr)
             connection = http.client.HTTPConnection(
                 proxy_url.hostname, proxy_url.port, timeout=self.timeout
             )
             connection.set_tunnel(host)
         else:
             if self.use_https and not self.verify_ssl:
+                print(f"Creating HTTPS connection to {host} with unverified SSL context", file=os.sys.stderr)
                 connection = http.client.HTTPSConnection(
                     host, timeout=self.timeout, context=self.context
                 )
             else:
                 if self.use_https:
+                    print(f"Creating HTTPS connection to {host} with verified SSL", file=os.sys.stderr)
                     connection = http.client.HTTPSConnection(host, timeout=self.timeout)
                 else:
+                    print(f"Creating HTTP connection to {host}", file=os.sys.stderr)
                     connection = http.client.HTTPConnection(host, timeout=self.timeout)
 
         return connection
@@ -417,7 +422,11 @@ def get_odoo_client():
     timeout = int(
         os.environ.get("ODOO_TIMEOUT", "30")
     )  # Increase default timeout to 30 seconds
-    verify_ssl = os.environ.get("ODOO_VERIFY_SSL", "1").lower() in ["1", "true", "yes"]
+    
+    # Parse verify_ssl value with more detailed logging
+    verify_ssl_raw = os.environ.get("ODOO_VERIFY_SSL", "1")
+    verify_ssl = verify_ssl_raw.lower() in ["1", "true", "yes"]
+    print(f"ODOO_VERIFY_SSL raw value: '{verify_ssl_raw}', parsed as: {verify_ssl}", file=os.sys.stderr)
 
     # Print detailed configuration
     print("Odoo client configuration:", file=os.sys.stderr)
@@ -427,11 +436,15 @@ def get_odoo_client():
     print(f"  Timeout: {timeout}s", file=os.sys.stderr)
     print(f"  Verify SSL: {verify_ssl}", file=os.sys.stderr)
 
-    return OdooClient(
-        url=config["url"],
-        db=config["db"],
-        username=config["username"],
-        password=config["password"],
-        timeout=timeout,
-        verify_ssl=verify_ssl,
-    )
+    try:
+        return OdooClient(
+            url=config["url"],
+            db=config["db"],
+            username=config["username"],
+            password=config["password"],
+            timeout=timeout,
+            verify_ssl=verify_ssl,
+        )
+    except Exception as e:
+        print(f"Error creating Odoo client: {str(e)}", file=os.sys.stderr)
+        raise
