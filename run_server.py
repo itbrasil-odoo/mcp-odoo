@@ -73,9 +73,19 @@ def main() -> int:
             logger.info("Starting Odoo MCP server with stdio transport...")
             async with stdio_server() as streams:
                 logger.info("Stdio server initialized, running MCP server...")
-                await mcp._mcp_server.run(
-                    streams[0], streams[1], mcp._mcp_server.create_initialization_options()
-                )
+                # Keep the server running until explicitly stopped
+                try:
+                    await mcp._mcp_server.run(
+                        streams[0], streams[1], mcp._mcp_server.create_initialization_options()
+                    )
+                    logger.info("MCP server run completed, waiting for requests...")
+                    # Add an infinite wait to keep the server alive
+                    while True:
+                        await asyncio.sleep(3600)  # Sleep for an hour and continue running
+                except asyncio.CancelledError:
+                    logger.info("MCP server task cancelled")
+                except Exception as e:
+                    logger.error(f"Error in MCP server: {e}", exc_info=True)
                 
         # Run server
         anyio.run(arun)
