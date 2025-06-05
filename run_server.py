@@ -29,18 +29,25 @@ def setup_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     
-    # Console handler
+    # Remove existing handlers if any
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    
+    # Console handler with clean format
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     
-    # File handler
+    # File handler with detailed format
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     
-    # Format for both handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
+    # Clean format for console
+    console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
+    console_handler.setFormatter(console_formatter)
+    
+    # Detailed format for file
+    file_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    file_handler.setFormatter(file_formatter)
     
     # Add handlers to logger
     logger.addHandler(console_handler)
@@ -57,43 +64,43 @@ def main() -> int:
     
     try:
         logger.info("=== ODOO MCP SERVER STARTING ===")
-        logger.info(f"Python version: {sys.version}")
-        logger.info("Environment variables:")
-        for key, value in os.environ.items():
-            if key.startswith("ODOO_"):
+        logger.info(f"Python {sys.version.split()[0]}")
+        
+        # Log Odoo environment variables in a cleaner format
+        odoo_vars = {k: v for k, v in os.environ.items() if k.startswith("ODOO_")}
+        if odoo_vars:
+            logger.info("Odoo Configuration:")
+            for key in sorted(odoo_vars.keys()):
                 if key == "ODOO_PASSWORD":
                     logger.info(f"  {key}: ***hidden***")
                 else:
-                    logger.info(f"  {key}: {value}")
-        
-        logger.info(f"MCP object type: {type(mcp)}")
+                    logger.info(f"  {key}: {odoo_vars[key]}")
         
         # Run server in stdio mode like the official examples
         async def arun():
-            logger.info("Starting Odoo MCP server with stdio transport...")
+            logger.info("Starting MCP server...")
             async with stdio_server() as streams:
-                logger.info("Stdio server initialized, running MCP server...")
                 # Keep the server running until explicitly stopped
                 try:
                     await mcp._mcp_server.run(
                         streams[0], streams[1], mcp._mcp_server.create_initialization_options()
                     )
-                    logger.info("MCP server run completed, waiting for requests...")
+                    logger.info("Server initialized and ready for requests")
                     # Add an infinite wait to keep the server alive
                     while True:
                         await asyncio.sleep(3600)  # Sleep for an hour and continue running
                 except asyncio.CancelledError:
-                    logger.info("MCP server task cancelled")
+                    logger.info("Server task cancelled")
                 except Exception as e:
-                    logger.error(f"Error in MCP server: {e}", exc_info=True)
+                    logger.error(f"Server error: {e}")
                 
         # Run server
         anyio.run(arun)
-        logger.info("MCP server stopped normally")
+        logger.info("Server stopped normally")
         return 0
         
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
+        logger.error(f"Fatal error: {e}")
         return 1
 
 

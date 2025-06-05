@@ -72,12 +72,7 @@ class OdooClient:
         )
 
         print(f"Connecting to Odoo at: {self.url}", file=os.sys.stderr)
-        print(f"  Hostname: {self.hostname}", file=os.sys.stderr)
-        print(
-            f"  Timeout: {self.timeout}s, Verify SSL: {self.verify_ssl}",
-            file=os.sys.stderr,
-        )
-
+        
         # Setup endpoints
         self._common = xmlrpc.client.ServerProxy(
             f"{self.url}/xmlrpc/2/common", transport=transport
@@ -87,15 +82,8 @@ class OdooClient:
         )
 
         # Authenticate and get user ID
-        print(
-            f"Authenticating with database: {self.db}, username: {self.username}",
-            file=os.sys.stderr,
-        )
+        print(f"Authenticating with database: {self.db}", file=os.sys.stderr)
         try:
-            print(
-                f"Making request to {self.hostname}/xmlrpc/2/common (attempt 1)",
-                file=os.sys.stderr,
-            )
             self.uid = self._common.authenticate(
                 self.db, self.username, self.password, {}
             )
@@ -316,7 +304,6 @@ class RedirectTransport(xmlrpc.client.Transport):
 
         if use_https and not verify_ssl:
             import ssl
-            print(f"SSL verification disabled, creating unverified context", file=os.sys.stderr)
             self.context = ssl._create_unverified_context()
 
     def make_connection(self, host):
@@ -329,16 +316,13 @@ class RedirectTransport(xmlrpc.client.Transport):
             connection.set_tunnel(host)
         else:
             if self.use_https and not self.verify_ssl:
-                print(f"Creating HTTPS connection to {host} with unverified SSL context", file=os.sys.stderr)
                 connection = http.client.HTTPSConnection(
                     host, timeout=self.timeout, context=self.context
                 )
             else:
                 if self.use_https:
-                    print(f"Creating HTTPS connection to {host} with verified SSL", file=os.sys.stderr)
                     connection = http.client.HTTPSConnection(host, timeout=self.timeout)
                 else:
-                    print(f"Creating HTTP connection to {host}", file=os.sys.stderr)
                     connection = http.client.HTTPConnection(host, timeout=self.timeout)
 
         return connection
@@ -348,7 +332,6 @@ class RedirectTransport(xmlrpc.client.Transport):
         redirects = 0
         while redirects < self.max_redirects:
             try:
-                print(f"Making request to {host}{handler}", file=os.sys.stderr)
                 return super().request(host, handler, request_body, verbose)
             except xmlrpc.client.ProtocolError as err:
                 if err.errcode in (301, 302, 303, 307, 308) and err.headers.get(
@@ -419,16 +402,13 @@ def get_odoo_client():
     config = load_config()
 
     # Get additional options from environment variables
-    timeout = int(
-        os.environ.get("ODOO_TIMEOUT", "30")
-    )  # Increase default timeout to 30 seconds
+    timeout = int(os.environ.get("ODOO_TIMEOUT", "30"))
     
-    # Parse verify_ssl value with more detailed logging
+    # Parse verify_ssl value
     verify_ssl_raw = os.environ.get("ODOO_VERIFY_SSL", "1")
     verify_ssl = verify_ssl_raw.lower() in ["1", "true", "yes"]
-    print(f"ODOO_VERIFY_SSL raw value: '{verify_ssl_raw}', parsed as: {verify_ssl}", file=os.sys.stderr)
-
-    # Print detailed configuration
+    
+    # Print configuration in a single block
     print("Odoo client configuration:", file=os.sys.stderr)
     print(f"  URL: {config['url']}", file=os.sys.stderr)
     print(f"  Database: {config['db']}", file=os.sys.stderr)
