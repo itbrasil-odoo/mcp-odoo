@@ -1,71 +1,83 @@
 # Odoo MCP Server
 
+[![CI](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/ci.yml/badge.svg)](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/ci.yml)
+[![Pre-commit](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/pre-commit.yml)
+[![Odoo Integration](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/odoo-integration.yml/badge.svg)](https://github.com/itbrasil-odoo/mcp-odoo/actions/workflows/odoo-integration.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 An MCP server implementation that integrates with Odoo ERP systems, enabling AI assistants to interact with Odoo data and functionality through the Model Context Protocol.
 
 ## Features
 
-* **Comprehensive Odoo Integration**: Full access to Odoo models, records, and methods
-* **XML-RPC Communication**: Secure connection to Odoo instances via XML-RPC
-* **Flexible Configuration**: Support for config files and environment variables
-* **Resource Pattern System**: URI-based access to Odoo data structures
-* **Error Handling**: Clear error messages for common Odoo API issues
-* **Stateless Operations**: Clean request/response cycle for reliable integration
+- **Comprehensive Odoo Integration**: Full access to Odoo models, records, and methods
+- **XML-RPC Communication**: Secure connection to Odoo instances via XML-RPC
+- **Flexible Configuration**: Support for config files and environment variables
+- **Resource Pattern System**: URI-based access to Odoo data structures
+- **Error Handling**: Clear error messages for common Odoo API issues
+- **Stateless Operations**: Clean request/response cycle for reliable integration
 
 ## Tools
 
-* **execute_method**
-  * Execute a custom method on an Odoo model
-  * Inputs:
-    * `model` (string): The model name (e.g., 'res.partner')
-    * `method` (string): Method name to execute
-    * `args` (optional array): Positional arguments
-    * `kwargs` (optional object): Keyword arguments
-  * Returns: Dictionary with the method result and success indicator
+- **execute_method**
 
-* **manage_odoo_server**
-  * Check Odoo server status and optionally start/stop it
-  * Inputs:
-    * `action` (string): Action to perform ('status', 'start', 'stop') - default: 'status'
-    * `config_file` (optional string): Path to Odoo config file
-    * `python_path` (optional string): Path to Python executable
-    * `odoo_bin_path` (optional string): Path to odoo-bin script
-  * Returns: Object containing success indicator, server status, and operation message
+  - Execute a custom method on an Odoo model
+  - Inputs:
+    - `model` (string): The model name (e.g., 'res.partner')
+    - `method` (string): Method name to execute
+    - `args` (optional array): Positional arguments
+    - `kwargs` (optional object): Keyword arguments
+  - Returns: Dictionary with the method result and success indicator
 
-* **search_employee**
-  * Search for employees by name
-  * Inputs:
-    * `name` (string): The name (or part of the name) to search for
-    * `limit` (optional number): The maximum number of results to return (default 20)
-  * Returns: Object containing success indicator, list of matching employee names and IDs, and any error message
+- **manage_odoo_server**
 
-* **search_holidays**
-  * Searches for holidays within a specified date range
-  * Inputs:
-    * `start_date` (string): Start date in YYYY-MM-DD format
-    * `end_date` (string): End date in YYYY-MM-DD format
-    * `employee_id` (optional number): Optional employee ID to filter holidays
-  * Returns: Object containing success indicator, list of holidays found, and any error message
+  - Check Odoo server status and optionally start/stop it
+  - Inputs:
+    - `action` (string): Action to perform ('status', 'start', 'stop') - default: 'status'
+    - `config_file` (optional string): Path to Odoo config file
+    - `python_path` (optional string): Path to Python executable
+    - `odoo_bin_path` (optional string): Path to odoo-bin script
+  - Returns: Object containing success indicator, server status, and operation message
+
+- **search_employee**
+
+  - Search for employees by name
+  - Inputs:
+    - `name` (string): The name (or part of the name) to search for
+    - `limit` (optional number): The maximum number of results to return (default 20)
+  - Returns: Object containing success indicator, list of matching employee names and IDs, and any error message
+
+- **search_holidays**
+  - Searches for holidays within a specified date range
+  - Inputs:
+    - `start_date` (string): Start date in YYYY-MM-DD format
+    - `end_date` (string): End date in YYYY-MM-DD format
+    - `employee_id` (optional number): Optional employee ID to filter holidays
+  - Returns: Object containing success indicator, list of holidays found, and any error message
 
 ## Resources
 
-* **odoo://models**
-  * Lists all available models in the Odoo system
-  * Returns: JSON array of model information
+- **odoo://models**
 
-* **odoo://model/{model_name}**
-  * Get information about a specific model including fields
-  * Example: `odoo://model/res.partner`
-  * Returns: JSON object with model metadata and field definitions
+  - Lists all available models in the Odoo system
+  - Returns: JSON array of model information
 
-* **odoo://record/{model_name}/{record_id}**
-  * Get a specific record by ID
-  * Example: `odoo://record/res.partner/1`
-  * Returns: JSON object with record data
+- **odoo://model/{model_name}**
 
-* **odoo://search/{model_name}/{domain}**
-  * Search for records that match a domain
-  * Example: `odoo://search/res.partner/[["is_company","=",true]]`
-  * Returns: JSON array of matching records (limited to 10 by default)
+  - Get information about a specific model including fields
+  - Example: `odoo://model/res.partner`
+  - Returns: JSON object with model metadata and field definitions
+
+- **odoo://record/{model_name}/{record_id}**
+
+  - Get a specific record by ID
+  - Example: `odoo://record/res.partner/1`
+  - Returns: JSON object with record data
+
+- **odoo://search/{model_name}/{domain}**
+  - Search for records that match a domain
+  - Example: `odoo://search/res.partner/[["is_company","=",true]]`
+  - Returns: JSON array of matching records (limited to 10 by default)
 
 ## Configuration
 
@@ -83,19 +95,20 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
 ```
 
 2. Alternatively, use environment variables:
-   * `ODOO_URL`: Your Odoo server URL
-   * `ODOO_DB`: Database name
-   * `ODOO_USERNAME`: Login username
-   * `ODOO_PASSWORD`: Password or API key
-   * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
-   * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
-   * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
+
+   - `ODOO_URL`: Your Odoo server URL
+   - `ODOO_DB`: Database name
+   - `ODOO_USERNAME`: Login username
+   - `ODOO_PASSWORD`: Password or API key
+   - `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
+   - `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
+   - `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
 
 3. For system management features (start/stop Odoo server):
-   * `ODOO_CONFIG_FILE`: Path to Odoo configuration file (default: odoo.conf)
-   * `ODOO_PYTHON_PATH`: Path to Python executable (default: python)
-   * `ODOO_BIN_PATH`: Path to odoo-bin script (default: odoo-bin)
-   * `ODOO_PORT`: Odoo server port (default: 8069)
+   - `ODOO_CONFIG_FILE`: Path to Odoo configuration file (default: odoo.conf)
+   - `ODOO_PYTHON_PATH`: Path to Python executable (default: python)
+   - `ODOO_BIN_PATH`: Path to odoo-bin script (default: odoo-bin)
+   - `ODOO_PORT`: Odoo server port (default: 8069)
 
 ### Environment Variables Setup
 
@@ -105,9 +118,10 @@ Copy `.env.example` to `.env` and configure your environment:
 cp .env.example .env
 # Edit .env with your specific paths and credentials
 ```
-   * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
-   * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
-   * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
+
+- `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
+- `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
+- `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
 
 ### Usage with Claude Desktop
 
@@ -118,10 +132,7 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
     "odoo": {
       "command": "python",
-      "args": [
-        "-m",
-        "odoo_mcp"
-      ],
+      "args": ["-m", "odoo_mcp"],
       "env": {
         "ODOO_URL": "https://your-odoo-instance.com",
         "ODOO_DB": "your-database-name",
@@ -202,18 +213,19 @@ docker build -t mcp/odoo:latest -f Dockerfile .
 When using the MCP tools for Odoo, pay attention to these parameter formatting guidelines:
 
 1. **Domain Parameter**:
-   * The following domain formats are supported:
-     * List format: `[["field", "operator", value], ...]`
-     * Object format: `{"conditions": [{"field": "...", "operator": "...", "value": "..."}]}`
-     * JSON string of either format
-   * Examples:
-     * List format: `[["is_company", "=", true]]`
-     * Object format: `{"conditions": [{"field": "date_order", "operator": ">=", "value": "2025-03-01"}]}`
-     * Multiple conditions: `[["date_order", ">=", "2025-03-01"], ["date_order", "<=", "2025-03-31"]]`
+
+   - The following domain formats are supported:
+     - List format: `[["field", "operator", value], ...]`
+     - Object format: `{"conditions": [{"field": "...", "operator": "...", "value": "..."}]}`
+     - JSON string of either format
+   - Examples:
+     - List format: `[["is_company", "=", true]]`
+     - Object format: `{"conditions": [{"field": "date_order", "operator": ">=", "value": "2025-03-01"}]}`
+     - Multiple conditions: `[["date_order", ">=", "2025-03-01"], ["date_order", "<=", "2025-03-31"]]`
 
 2. **Fields Parameter**:
-   * Should be an array of field names: `["name", "email", "phone"]`
-   * The server will try to parse string inputs as JSON
+   - Should be an array of field names: `["name", "email", "phone"]`
+   - The server will try to parse string inputs as JSON
 
 ## License
 
