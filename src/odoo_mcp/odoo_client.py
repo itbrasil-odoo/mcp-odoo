@@ -250,7 +250,7 @@ class OdooClient:
         try:
             # Odoo XML-RPC signature:
             # execute_kw(db, uid, password, model, 'search_read', [domain], {kwargs})
-            # The kwargs become **kwargs for search_read method
+            # Domain must be a list, even if empty
             kwargs = {}
             if fields is not None:
                 kwargs["fields"] = fields
@@ -261,8 +261,8 @@ class OdooClient:
             if order is not None:
                 kwargs["order"] = order
 
-            # Pass domain as single arg, rest as kwargs
-            result = self._execute(model_name, "search_read", [domain], **kwargs)
+            # Pass domain as single positional arg, rest as kwargs
+            result = self._execute(model_name, "search_read", domain, **kwargs)
             return result
         except Exception as e:
             print(f"Error in search_read: {str(e)}", file=os.sys.stderr)
