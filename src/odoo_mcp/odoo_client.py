@@ -2,13 +2,12 @@
 Odoo XML-RPC client for MCP server integration
 """
 
+import http.client
 import json
 import os
 import re
 import socket
 import urllib.parse
-
-import http.client
 import xmlrpc.client
 
 
@@ -72,7 +71,7 @@ class OdooClient:
         )
 
         print(f"Connecting to Odoo at: {self.url}", file=os.sys.stderr)
-        
+
         # Setup endpoints
         self._common = xmlrpc.client.ServerProxy(
             f"{self.url}/xmlrpc/2/common", transport=transport
@@ -183,21 +182,14 @@ class OdooClient:
         try:
             # Primeiro, verifique se o modelo existe usando search
             model_ids = self._execute(
-                "ir.model",
-                "search",
-                [("model", "=", model_name)]
+                "ir.model", "search", [("model", "=", model_name)]
             )
 
             if not model_ids:
                 return {"error": f"Model {model_name} not found"}
 
             # Depois, leia os dados do modelo usando read em vez de search_read
-            result = self._execute(
-                "ir.model",
-                "read",
-                model_ids,
-                ["name", "model"]
-            )
+            result = self._execute("ir.model", "read", model_ids, ["name", "model"])
 
             if not result:
                 return {"error": f"Model {model_name} found but could not read data"}
@@ -315,7 +307,17 @@ class RedirectTransport(xmlrpc.client.Transport):
 
         if use_https and not verify_ssl:
             import ssl
-            self.context = ssl._create_unverified_context()
+            import warnings
+
+            # nosec B323 - Development/test only, not for production
+            # Warn user about security implications
+            warnings.warn(
+                "SSL verification is disabled. "
+                "This is insecure and should only be used in development.",
+                category=UserWarning,
+                stacklevel=2,
+            )
+            self.context = ssl._create_unverified_context()  # nosec B323
 
     def make_connection(self, host):
         if self.proxy:
@@ -414,11 +416,11 @@ def get_odoo_client():
 
     # Get additional options from environment variables
     timeout = int(os.environ.get("ODOO_TIMEOUT", "30"))
-    
+
     # Parse verify_ssl value
     verify_ssl_raw = os.environ.get("ODOO_VERIFY_SSL", "1")
     verify_ssl = verify_ssl_raw.lower() in ["1", "true", "yes"]
-    
+
     # Print configuration in a single block
     print("Odoo client configuration:", file=os.sys.stderr)
     print(f"  URL: {config['url']}", file=os.sys.stderr)

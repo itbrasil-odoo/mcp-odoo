@@ -23,4 +23,4 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Initial release with basic Odoo XML-RPC client support
 - MCP Server integration for Odoo
-- Command-line interface for quick setup and testing 
+- Command-line interface for quick setup and testing

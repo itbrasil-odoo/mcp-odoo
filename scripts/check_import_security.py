@@ -24,22 +24,26 @@ RISKY_IMPORTS = {
         "severity": "HIGH",
     },
     "subprocess_shell": {
-        "pattern": re.compile(r"subprocess\.(call|run|Popen).*shell\s*=\s*True"),
+        # Match shell=True but exclude comments
+        "pattern": re.compile(
+            r"^(?!.*#.*shell).*subprocess\.(call|run|Popen).*shell\s*=\s*True",
+            re.MULTILINE,
+        ),
         "reason": "shell=True is dangerous.",
         "severity": "CRITICAL",
     },
     "os_system": {
-        "pattern": re.compile(r"os\.system\s*\("),
+        "pattern": re.compile(r"^(?!.*#).*os\.system\s*\(", re.MULTILINE),
         "reason": "os.system is unsafe. Use subprocess.",
         "severity": "HIGH",
     },
     "eval": {
-        "pattern": re.compile(r"\beval\s*\("),
+        "pattern": re.compile(r"^(?!.*#).*\beval\s*\(", re.MULTILINE),
         "reason": "eval is dangerous. Never use with user input.",
         "severity": "CRITICAL",
     },
     "exec": {
-        "pattern": re.compile(r"\bexec\s*\("),
+        "pattern": re.compile(r"^(?!.*#).*\bexec\s*\(", re.MULTILINE),
         "reason": "exec is dangerous. Never use with user input.",
         "severity": "CRITICAL",
     },

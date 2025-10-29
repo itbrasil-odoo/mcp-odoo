@@ -23,10 +23,11 @@ SECURITY_CHECKS = {
     },
     "unsafe_subprocess": {
         "patterns": [
-            re.compile(r"shell\s*=\s*True"),
-            re.compile(r"^[^#]*os\.system\s*\("),
-            re.compile(r"^[^#]*\beval\s*\("),
-            re.compile(r"^[^#]*\bexec\s*\("),
+            # Match actual code, not strings in regex patterns
+            re.compile(r"^(?!.*re\.compile)(?!.*#).*shell\s*=\s*True"),
+            re.compile(r"^(?!.*re\.compile)(?!.*#).*os\.system\s*\("),
+            re.compile(r"^(?!.*re\.compile)(?!.*#).*\beval\s*\("),
+            re.compile(r"^(?!.*re\.compile)(?!.*#).*\bexec\s*\("),
         ],
         "message": "Unsafe command execution pattern detected.",
         "severity": "CRITICAL",

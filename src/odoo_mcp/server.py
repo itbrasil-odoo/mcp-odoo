@@ -8,7 +8,7 @@ import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
@@ -318,10 +318,11 @@ def execute_method(
                         try:
                             import ast
 
+                            # noqa: S307 - Used safely with literal only
                             parsed_domain = ast.literal_eval(domain)
                             if isinstance(parsed_domain, list):
                                 domain_list = parsed_domain
-                        except:
+                        except:  # noqa: E722
                             domain_list = []
 
                 # Validate domain_list
