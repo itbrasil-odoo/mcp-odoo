@@ -35,7 +35,7 @@ jobs:
         run: flake8 app.py simple_server.py src/ --extend-ignore=E501,W503 --exclude=.venv,__pycache__,.git,dist,node_modules
 
       - name: Run bandit security check
-        run: bandit -r src/ -ll
+        run: bandit -r src/ -ll -c .bandit
 
   type-check:
     name: Type Checking
