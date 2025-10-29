@@ -248,8 +248,9 @@ class OdooClient:
             5
         """
         try:
-            # Build kwargs for search_read parameters (not fields!)
-            # Odoo signature: search_read(domain, fields=None, offset=0, limit=None, order=None)
+            # Odoo XML-RPC signature:
+            # execute_kw(db, uid, password, model, 'search_read', [domain], {kwargs})
+            # The kwargs become **kwargs for search_read method
             kwargs = {}
             if fields is not None:
                 kwargs["fields"] = fields
@@ -260,7 +261,8 @@ class OdooClient:
             if order is not None:
                 kwargs["order"] = order
 
-            result = self._execute(model_name, "search_read", domain, kwargs)
+            # Pass domain as single arg, rest as kwargs
+            result = self._execute(model_name, "search_read", [domain], **kwargs)
             return result
         except Exception as e:
             print(f"Error in search_read: {str(e)}", file=os.sys.stderr)
