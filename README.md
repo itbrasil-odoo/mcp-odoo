@@ -22,6 +22,15 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
     * `kwargs` (optional object): Keyword arguments
   * Returns: Dictionary with the method result and success indicator
 
+* **manage_odoo_server**
+  * Check Odoo server status and optionally start/stop it
+  * Inputs:
+    * `action` (string): Action to perform ('status', 'start', 'stop') - default: 'status'
+    * `config_file` (optional string): Path to Odoo config file
+    * `python_path` (optional string): Path to Python executable
+    * `odoo_bin_path` (optional string): Path to odoo-bin script
+  * Returns: Object containing success indicator, server status, and operation message
+
 * **search_employee**
   * Search for employees by name
   * Inputs:
@@ -78,6 +87,24 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
    * `ODOO_DB`: Database name
    * `ODOO_USERNAME`: Login username
    * `ODOO_PASSWORD`: Password or API key
+   * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
+   * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
+   * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
+
+3. For system management features (start/stop Odoo server):
+   * `ODOO_CONFIG_FILE`: Path to Odoo configuration file (default: odoo.conf)
+   * `ODOO_PYTHON_PATH`: Path to Python executable (default: python)
+   * `ODOO_BIN_PATH`: Path to odoo-bin script (default: odoo-bin)
+   * `ODOO_PORT`: Odoo server port (default: 8069)
+
+### Environment Variables Setup
+
+Copy `.env.example` to `.env` and configure your environment:
+
+```bash
+cp .env.example .env
+# Edit .env with your specific paths and credentials
+```
    * `ODOO_TIMEOUT`: Connection timeout in seconds (default: 30)
    * `ODOO_VERIFY_SSL`: Whether to verify SSL certificates (default: true)
    * `HTTP_PROXY`: Force the ODOO connection to use an HTTP proxy
