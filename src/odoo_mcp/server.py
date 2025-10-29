@@ -15,24 +15,40 @@ from pydantic import BaseModel, Field
 
 from .odoo_client import OdooClient, get_odoo_client
 
+# Global client cache for lazy initialization
+_odoo_client_cache: Optional[OdooClient] = None
+
+
+def get_or_create_odoo_client() -> OdooClient:
+    """
+    Get or create Odoo client with lazy initialization.
+    Raises ConnectionError if Odoo is not available.
+    """
+    global _odoo_client_cache
+    if _odoo_client_cache is None:
+        _odoo_client_cache = get_odoo_client()
+    return _odoo_client_cache
+
 
 @dataclass
 class AppContext:
     """Application context for the MCP server"""
 
-    odoo: OdooClient
+    odoo: Optional[OdooClient] = None
 
 
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     """
     Application lifespan for initialization and cleanup
+    Lazy initialization - Odoo client is created on first use
     """
-    # Initialize Odoo client on startup
-    odoo_client = get_odoo_client()
+    import sys
+
+    print("Odoo MCP Server ready (lazy connection mode)", file=sys.stderr)
 
     try:
-        yield AppContext(odoo=odoo_client)
+        yield AppContext(odoo=None)
     finally:
         # No cleanup needed for Odoo client
         pass
@@ -55,9 +71,19 @@ mcp = FastMCP(
 )
 def get_models() -> str:
     """Lists all available models in the Odoo system"""
-    odoo_client = get_odoo_client()
-    models = odoo_client.get_models()
-    return json.dumps(models, indent=2)
+    try:
+        odoo_client = get_or_create_odoo_client()
+        models = odoo_client.get_models()
+        return json.dumps(models, indent=2)
+    except ConnectionError as e:
+        return json.dumps(
+            {
+                "error": "Odoo connection failed",
+                "message": str(e),
+                "hint": "Make sure Odoo is running and accessible",
+            },
+            indent=2,
+        )
 
 
 @mcp.resource(
@@ -71,8 +97,8 @@ def get_model_info(model_name: str) -> str:
     Parameters:
         model_name: Name of the Odoo model (e.g., 'res.partner')
     """
-    odoo_client = get_odoo_client()
     try:
+        odoo_client = get_or_create_odoo_client()
         # Get model info
         model_info = odoo_client.get_model_info(model_name)
 
@@ -88,6 +114,15 @@ def get_model_info(model_name: str) -> str:
             model_info["fields_error"] = str(field_error)
 
         return json.dumps(model_info, indent=2)
+    except ConnectionError as e:
+        return json.dumps(
+            {
+                "error": "Odoo connection failed",
+                "message": str(e),
+                "hint": "Make sure Odoo is running and accessible",
+            },
+            indent=2,
+        )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
@@ -104,7 +139,7 @@ def get_record(model_name: str, record_id: str) -> str:
         model_name: Name of the Odoo model (e.g., 'res.partner')
         record_id: ID of the record
     """
-    odoo_client = get_odoo_client()
+    odoo_client = get_or_create_odoo_client()
     try:
         record_id_int = int(record_id)
         record = odoo_client.read_records(model_name, [record_id_int])
@@ -129,7 +164,7 @@ def search_records_resource(model_name: str, domain: str) -> str:
         model_name: Name of the Odoo model (e.g., 'res.partner')
         domain: Search domain in JSON format (e.g., '[[\"name\", \"ilike\", \"test\"]]')
     """
-    odoo_client = get_odoo_client()
+    odoo_client = get_or_create_odoo_client()
     try:
         # Parse domain from JSON string
         domain_list = json.loads(domain)
