@@ -16,17 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Odoo 14.0 - Python 3.6 (OCA-CI)
-          - odoo-version: "14.0"
-            python-version: "3.6"
-            postgres-version: "12"
-            container: "ghcr.io/oca/oca-ci/py3.6-odoo14.0:latest"
-
-          # Odoo 15.0 - Python 3.8 (OCA-CI)
-          - odoo-version: "15.0"
-            python-version: "3.8"
-            postgres-version: "13"
-            container: "ghcr.io/oca/oca-ci/py3.8-odoo15.0:latest"
+          # Odoo 14.0 and 15.0 skipped - Python 3.6/3.8 incompatible with mcp package
 
           # Odoo 16.0 - Python 3.10 (OCA-CI)
           - odoo-version: "16.0"

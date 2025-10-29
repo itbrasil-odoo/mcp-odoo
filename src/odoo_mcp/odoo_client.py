@@ -248,11 +248,13 @@ class OdooClient:
             5
         """
         try:
+            # Build kwargs for search_read parameters (not fields!)
+            # Odoo signature: search_read(domain, fields=None, offset=0, limit=None, order=None)
             kwargs = {}
-            if offset:
-                kwargs["offset"] = offset
             if fields is not None:
                 kwargs["fields"] = fields
+            if offset is not None:
+                kwargs["offset"] = offset
             if limit is not None:
                 kwargs["limit"] = limit
             if order is not None:
