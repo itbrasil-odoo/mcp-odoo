@@ -8,9 +8,154 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-odoo-16:
-    name: Test with Odoo 16
+  test-odoo:
+    name: Test with Odoo ${{ matrix.odoo-version }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Odoo 14.0 - Python 3.6
+          - odoo-version: "14.0"
+            python-version: "3.6"
+            postgres-version: "12"
+            container: "ghcr.io/oca/oca-ci/py3.6-odoo14.0:latest"
+
+          # Odoo 15.0 - Python 3.8
+          - odoo-version: "15.0"
+            python-version: "3.8"
+            postgres-version: "13"
+            container: "ghcr.io/oca/oca-ci/py3.8-odoo15.0:latest"
+
+          # Odoo 16.0 - Python 3.10
+          - odoo-version: "16.0"
+            python-version: "3.10"
+            postgres-version: "14"
+            container: "ghcr.io/oca/oca-ci/py3.10-odoo16.0:latest"
+
+          # Odoo 17.0 - Python 3.11
+          - odoo-version: "17.0"
+            python-version: "3.11"
+            postgres-version: "15"
+            container: "ghcr.io/oca/oca-ci/py3.11-odoo17.0:latest"
+
+          # Odoo 18.0 - Python 3.12
+          - odoo-version: "18.0"
+            python-version: "3.12"
+            postgres-version: "16"
+            container: "ghcr.io/oca/oca-ci/py3.12-odoo18.0:latest"
+
+          # Odoo 19.0 - Python 3.10
+          - odoo-version: "19.0"
+            python-version: "3.10"
+            postgres-version: "17"
+            container: "ghcr.io/oca/oca-ci/py3.10-odoo19.0:latest"
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_DB: odoo
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    container:
+      image: ${{ matrix.container }}
+      options: --user root
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MCP server dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start Odoo server
+        env:
+          PGHOST: postgres
+          PGUSER: odoo
+          PGPASSWORD: odoo
+          PGDATABASE: odoo
+        run: |
+          # Initialize database
+          odoo -d odoo --init base --stop-after-init --no-http
+
+          # Start Odoo in background
+          odoo -d odoo &
+          ODOO_PID=$!
+
+          # Wait for Odoo to be ready
+          timeout=60
+          while [ $timeout -gt 0 ]; do
+            if ps -p $ODOO_PID > /dev/null; then
+              echo "✅ Odoo is running (PID: $ODOO_PID)"
+              break
+            fi
+            echo "Waiting for Odoo to start... ($timeout seconds remaining)"
+            sleep 2
+            timeout=$((timeout - 2))
+          done
+
+          if [ $timeout -le 0 ]; then
+            echo "❌ Timeout waiting for Odoo to start"
+            exit 1
+          fi
+
+          # Give it a few more seconds to fully initialize
+          sleep 5
+
+      - name: Test MCP server connection to Odoo
+        env:
+          ODOO_URL: http://localhost:8069
+          ODOO_DB: odoo
+          ODOO_USERNAME: admin
+          ODOO_PASSWORD: admin
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          from odoo_mcp.odoo_client import get_odoo_client
+          import os
+
+          try:
+              client = get_odoo_client()
+              print('✅ Successfully connected to Odoo ${{ matrix.odoo-version }}!')
+              print(f'User ID: {client.uid}')
+
+              # Test basic operations
+              models = client.get_models()
+              print(f'✅ Retrieved {len(models)} models')
+
+              # Test res.partner
+              partners = client.execute_method('res.partner', 'search_read', [], {'limit': 5})
+              print(f'✅ Retrieved {len(partners)} partners')
+
+              print('✅ All tests passed for Odoo ${{ matrix.odoo-version }}!')
+
+          except Exception as e:
+              print(f'❌ Error testing Odoo ${{ matrix.odoo-version }}: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
+
+  test-odoo-docker:
+    name: Test with Odoo ${{ matrix.version }} (Docker)
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["16", "17", "18", "19"]
 
     services:
       postgres:
@@ -41,25 +186,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Pull Odoo 16 Docker image
-        run: docker pull odoo:16
+      - name: Pull Odoo Docker image
+        run: docker pull odoo:${{ matrix.version }}
 
-      - name: Start Odoo 16
+      - name: Start Odoo
         run: |
           docker run -d \
-            --name odoo16 \
+            --name odoo${{ matrix.version }} \
             --network host \
             -e HOST=localhost \
             -e PORT=8069 \
             -e USER=odoo \
             -e PASSWORD=odoo \
-            odoo:16
+            odoo:${{ matrix.version }}
 
           # Wait for Odoo to be ready (max 120 seconds)
           timeout=120
           while [ $timeout -gt 0 ]; do
             if curl -f http://localhost:8069/web/database/manager >/dev/null 2>&1; then
-              echo "✅ Odoo is ready!"
+              echo "✅ Odoo ${{ matrix.version }} is ready!"
               break
             fi
             echo "Waiting for Odoo to start... ($timeout seconds remaining)"
@@ -69,20 +214,9 @@ jobs:
 
           if [ $timeout -le 0 ]; then
             echo "❌ Timeout waiting for Odoo to start"
-            docker logs odoo16
+            docker logs odoo${{ matrix.version }}
             exit 1
           fi
-
-      - name: Create test database
-        run: |
-          # Wait a bit more to ensure Odoo is fully initialized
-          sleep 10
-
-          # Try to create database via Odoo web service
-          curl -X POST http://localhost:8069/web/database/create \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc":"2.0","method":"call","params":{"master_pwd":"admin","name":"test_db","login":"admin","password":"admin","lang":"en_US"},"id":1}' \
-            || echo "Database may already exist or creation not needed for XML-RPC"
 
       - name: Test MCP server connection to Odoo
         env:
@@ -99,7 +233,7 @@ jobs:
 
           try:
               client = get_odoo_client()
-              print('✅ Successfully connected to Odoo!')
+              print('✅ Successfully connected to Odoo ${{ matrix.version }}!')
               print(f'User ID: {client.uid}')
 
               # Test basic operations
@@ -117,108 +251,8 @@ jobs:
 
       - name: Show Odoo logs on failure
         if: failure()
-        run: docker logs odoo16
+        run: docker logs odoo${{ matrix.version }}
 
       - name: Cleanup
         if: always()
-        run: docker stop odoo16 && docker rm odoo16
-
-  test-odoo-17:
-    name: Test with Odoo 17
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: odoo
-          POSTGRES_USER: odoo
-          POSTGRES_PASSWORD: odoo
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install MCP server dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Pull Odoo 17 Docker image
-        run: docker pull odoo:17
-
-      - name: Start Odoo 17
-        run: |
-          docker run -d \
-            --name odoo17 \
-            --network host \
-            -e HOST=localhost \
-            -e PORT=8069 \
-            -e USER=odoo \
-            -e PASSWORD=odoo \
-            odoo:17
-
-          # Wait for Odoo to be ready (max 120 seconds)
-          timeout=120
-          while [ $timeout -gt 0 ]; do
-            if curl -f http://localhost:8069/web/database/manager >/dev/null 2>&1; then
-              echo "✅ Odoo is ready!"
-              break
-            fi
-            echo "Waiting for Odoo to start... ($timeout seconds remaining)"
-            sleep 5
-            timeout=$((timeout - 5))
-          done
-
-          if [ $timeout -le 0 ]; then
-            echo "❌ Timeout waiting for Odoo to start"
-            docker logs odoo17
-            exit 1
-          fi
-
-      - name: Test MCP server connection to Odoo
-        env:
-          ODOO_URL: http://localhost:8069
-          ODOO_DB: odoo
-          ODOO_USERNAME: admin
-          ODOO_PASSWORD: admin
-        run: |
-          python -c "
-          import sys
-          sys.path.insert(0, 'src')
-          from odoo_mcp.odoo_client import get_odoo_client
-          import os
-
-          try:
-              client = get_odoo_client()
-              print('✅ Successfully connected to Odoo!')
-              print(f'User ID: {client.uid}')
-
-              # Test basic operations
-              models = client.get_models()
-              print(f'✅ Retrieved {len(models)} models')
-
-          except Exception as e:
-              print(f'❌ Error: {e}')
-              sys.exit(1)
-          "
-
-      - name: Show Odoo logs on failure
-        if: failure()
-        run: docker logs odoo17
-
-      - name: Cleanup
-        if: always()
-        run: docker stop odoo17 && docker rm odoo17
+        run: docker stop odoo${{ matrix.version }} && docker rm odoo${{ matrix.version }}
