@@ -1,0 +1,89 @@
+repos:
+  # Code formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        args: ["--line-length=88"]
+        description: "Format Python code with Black"
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile=black", "--line-length=88"]
+        description: "Sort Python imports"
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - "--in-place"
+          - "--remove-all-unused-imports"
+          - "--remove-unused-variables"
+          - "--remove-duplicate-keys"
+          - "--expand-star-imports"
+        description: "Remove unused imports and variables"
+
+  # Security scanning
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ["-ll", "--skip", "B101,B601,B602"]
+        additional_dependencies: ["pbr"]
+        description: "Security issue scanner for Python"
+
+  # YAML validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        args: ["--unsafe"]
+        description: "Validate YAML syntax"
+      - id: check-json
+        description: "Validate JSON syntax"
+      - id: check-toml
+        description: "Validate TOML syntax"
+      - id: check-merge-conflict
+        description: "Check for merge conflicts"
+      - id: detect-private-key
+        description: "Detect private keys in code"
+      - id: end-of-file-fixer
+        description: "Ensure files end with newline"
+      - id: trailing-whitespace
+        description: "Trim trailing whitespace"
+      - id: check-case-conflict
+        description: "Check for case conflicts in filenames"
+      - id: check-symlinks
+        description: "Check for symlinks that don't point to anything"
+      - id: destroyed-symlinks
+        description: "Check for destroyed symlinks"
+
+  # Custom security checks for MCP
+  - repo: local
+    hooks:
+      - id: check-env-vars
+        name: "Check for hardcoded secrets"
+        entry: python -m scripts.check_secrets
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        description: "Check for hardcoded API keys or credentials"
+
+      - id: check-mcp-security
+        name: "Check MCP security best practices"
+        entry: python -m scripts.check_mcp_security
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        description: "Validate MCP security implementation"
+
+      - id: check-import-security
+        name: "Check import safety"
+        entry: python -m scripts.check_import_security
+        language: system
+        types: [python]
+        stages: [pre-commit]
+        description: "Ensure safe imports without security risks"

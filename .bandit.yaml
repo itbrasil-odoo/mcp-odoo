@@ -1,0 +1,24 @@
+# Bandit configuration for MCP security scanning
+# Suppress tests that are not applicable to MCP servers
+
+exclude_dirs:
+  - /test
+  - /tests
+  - "**/test_*.py"
+
+tests:
+  - B101  # assert_used
+  - B601  # paramiko_calls
+  - B602  # subprocess_popen_with_shell_equals_true
+  - B607  # partial_paramiko_calls
+  - B703  # set_bad_file_permissions
+
+skips: []
+
+assert_used:
+  skips:
+    - /test
+    - /tests
+
+hardcoded_password_string:
+  word_list: "./wordlist.txt"
