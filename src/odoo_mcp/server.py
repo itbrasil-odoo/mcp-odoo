@@ -276,7 +276,15 @@ def execute_method(
         - result: Result of the method (if success)
         - error: Error message (if failure)
     """
-    odoo = ctx.request_context.lifespan_context.odoo
+    try:
+        odoo = get_or_create_odoo_client()
+    except ConnectionError as e:
+        return {
+            "success": False,
+            "result": None,
+            "error": f"Odoo connection failed: {str(e)}. Make sure Odoo is running.",
+        }
+
     try:
         args = args or []
         kwargs = kwargs or {}
@@ -407,7 +415,15 @@ def search_employee(
     Returns:
         SearchEmployeeResponse containing results or error information.
     """
-    odoo = ctx.request_context.lifespan_context.odoo
+    try:
+        odoo = get_or_create_odoo_client()
+    except ConnectionError as e:
+        return SearchEmployeeResponse(
+            success=False,
+            result=None,
+            error=f"Odoo connection failed: {str(e)}. Make sure Odoo is running.",
+        )
+
     model = "hr.employee"
     method = "name_search"
 
@@ -432,17 +448,27 @@ def search_holidays(
     employee_id: Optional[int] = None,
 ) -> SearchHolidaysResponse:
     """
-    Searches for holidays within a specified date range.
+    Search for holidays within a specified date range
 
     Parameters:
-        start_date: Start date in YYYY-MM-DD format.
-        end_date: End date in YYYY-MM-DD format.
-        employee_id: Optional employee ID to filter holidays.
+        start_date: Start date in YYYY-MM-DD format
+        end_date: End date in YYYY-MM-DD format
+        employee_id: Optional employee ID to filter holidays
 
     Returns:
-        SearchHolidaysResponse:  Object containing the search results.
+        SearchHolidaysResponse containing:
+        - success: Boolean indicating success
+        - result: List of holidays found
+        - error: Error message (if failure)
     """
-    odoo = ctx.request_context.lifespan_context.odoo
+    try:
+        odoo = get_or_create_odoo_client()
+    except ConnectionError as e:
+        return SearchHolidaysResponse(
+            success=False,
+            result=None,
+            error=f"Odoo connection failed: {str(e)}. Make sure Odoo is running.",
+        )
 
     # Validate date format using datetime
     try:
@@ -465,24 +491,37 @@ def search_holidays(
 
     # Build the domain
     domain = [
-        "&",
-        ["start_datetime", "<=", f"{end_date} 22:59:59"],
-        # Use adjusted date
-        ["stop_datetime", ">=", f"{adjusted_start_date} 23:00:00"],
+        ("request_date_from", ">=", adjusted_start_date),
+        ("request_date_to", "<=", end_date),
+        ("state", "=", "validate"),
     ]
+
     if employee_id:
-        domain.append(
-            ["employee_id", "=", employee_id],
-        )
+        domain.append(("employee_id", "=", employee_id))
+
+    model = "hr.leave"
+    method = "search_read"
+    fields = [
+        "employee_id",
+        "holiday_status_id",
+        "request_date_from",
+        "request_date_to",
+        "state",
+    ]
 
     try:
-        holidays = odoo.search_read(
-            model_name="hr.leave.report.calendar",
-            domain=domain,
-        )
-        parsed_holidays = [Holiday(**holiday) for holiday in holidays]
-        return SearchHolidaysResponse(success=True, result=parsed_holidays)
-
+        result = odoo.execute_method(model, method, [domain], {"fields": fields})
+        parsed_result = [
+            Holiday(
+                employee_name=item.get("employee_id", [None, ""])[1],
+                holiday_type=item.get("holiday_status_id", [None, ""])[1],
+                start_datetime=item.get("request_date_from", ""),
+                end_datetime=item.get("request_date_to", ""),
+                state=item.get("state", ""),
+            )
+            for item in result
+        ]
+        return SearchHolidaysResponse(success=True, result=parsed_result)
     except Exception as e:
         return SearchHolidaysResponse(success=False, error=str(e))
 
