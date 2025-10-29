@@ -7,13 +7,14 @@ import logging
 import os
 import sys
 
-import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-
 # Adicionar o diretório src ao path para encontrar o módulo odoo_mcp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-from odoo_mcp.server import mcp  # FastMCP instance from our code
+
+import uvicorn  # noqa: E402
+from fastapi import FastAPI, Request  # noqa: E402
+from fastapi.responses import JSONResponse  # noqa: E402
+
+from odoo_mcp.server import mcp  # FastMCP instance from our code  # noqa: E402
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
@@ -72,7 +73,7 @@ async def resource_endpoint(request: Request):
         try:
             result_json = json.loads(result)
             return JSONResponse(result_json)
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError):
             return JSONResponse({"result": result})
 
     except Exception as e:

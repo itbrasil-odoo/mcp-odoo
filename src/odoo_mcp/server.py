@@ -365,7 +365,7 @@ def execute_method(
                             parsed_domain = ast.literal_eval(domain)
                             if isinstance(parsed_domain, list):
                                 domain_list = parsed_domain
-                        except:  # noqa: E722
+                        except (ValueError, SyntaxError):
                             domain_list = []
 
                 # Validate domain_list

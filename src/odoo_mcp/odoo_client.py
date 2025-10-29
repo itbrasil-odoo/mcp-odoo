@@ -9,6 +9,7 @@ import re
 import socket
 import urllib.parse
 import xmlrpc.client
+from typing import Any
 
 
 class OdooClient:
@@ -16,13 +17,13 @@ class OdooClient:
 
     def __init__(
         self,
-        url,
-        db,
-        username,
-        password,
-        timeout=10,
-        verify_ssl=True,
-    ):
+        url: str,
+        db: str,
+        username: str,
+        password: str,
+        timeout: int = 10,
+        verify_ssl: bool = True,
+    ) -> None:
         """
         Initialize the Odoo client with connection parameters
 
@@ -96,13 +97,13 @@ class OdooClient:
             print(f"Authentication error: {str(e)}", file=os.sys.stderr)
             raise ValueError(f"Failed to authenticate with Odoo: {str(e)}")
 
-    def _execute(self, model, method, *args, **kwargs):
+    def _execute(self, model: str, method: str, *args, **kwargs) -> Any:
         """Execute a method on an Odoo model"""
         return self._models.execute_kw(
             self.db, self.uid, self.password, model, method, args, kwargs
         )
 
-    def execute_method(self, model, method, *args, **kwargs):
+    def execute_method(self, model: str, method: str, *args, **kwargs) -> Any:
         """
         Execute an arbitrary method on a model
 
@@ -117,7 +118,7 @@ class OdooClient:
         """
         return self._execute(model, method, *args, **kwargs)
 
-    def get_models(self):
+    def get_models(self) -> list[str]:
         """
         Get a list of all available models in the system
 
@@ -163,7 +164,7 @@ class OdooClient:
             print(f"Error retrieving models: {str(e)}", file=os.sys.stderr)
             return {"model_names": [], "models_details": {}, "error": str(e)}
 
-    def get_model_info(self, model_name):
+    def get_model_info(self, model_name: str) -> dict[str, Any]:
         """
         Get information about a specific model
 
@@ -199,21 +200,15 @@ class OdooClient:
             print(f"Error retrieving model info: {str(e)}", file=os.sys.stderr)
             return {"error": str(e)}
 
-    def get_model_fields(self, model_name):
+    def get_model_fields(self, model_name: str) -> dict[str, Any]:
         """
-        Get field definitions for a specific model
+        Get fields of a specific model
 
         Args:
-            model_name: Name of the model (e.g., 'res.partner')
+            model_name: Name of the model
 
         Returns:
-            Dictionary mapping field names to their definitions
-
-        Examples:
-            >>> client = OdooClient(url, db, username, password)
-            >>> fields = client.get_model_fields('res.partner')
-            >>> print(fields['name']['type'])
-            'char'
+            Dictionary of field definitions
         """
         try:
             fields = self._execute(model_name, "fields_get")

@@ -1,0 +1,27 @@
+{
+  "include": ["src", "app.py", "simple_server.py", "run_server.py"],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules",
+    "dist",
+    "develop-eggs",
+    ".venv",
+    "venv"
+  ],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportGeneralTypeIssues": false,
+  "reportOptionalMemberAccess": true,
+  "reportOptionalSubscript": true,
+  "reportPrivateImportUsage": false,
+  "useLibraryCodeForTypes": true,
+  "stubPath": "typings"
+}

@@ -6,11 +6,13 @@ import json
 import logging
 import os
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Adicionar o diretório src ao path para encontrar o módulo odoo_mcp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-from odoo_mcp.odoo_client import get_odoo_client
+
+from http.server import BaseHTTPRequestHandler, HTTPServer  # noqa: E402
+
+from odoo_mcp.odoo_client import get_odoo_client  # noqa: E402
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
