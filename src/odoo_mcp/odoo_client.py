@@ -8,8 +8,15 @@ import os
 import re
 import socket
 import urllib.parse
-import xmlrpc.client
 from typing import Any
+
+# Security: Patch xmlrpc.client to prevent XML attacks (B411)
+from defusedxml import xmlrpc as defused_xmlrpc
+
+defused_xmlrpc.monkey_patch()
+
+# Now safe to import xmlrpc.client after monkey-patching
+import xmlrpc.client  # noqa: E402, S411
 
 
 class OdooClient:

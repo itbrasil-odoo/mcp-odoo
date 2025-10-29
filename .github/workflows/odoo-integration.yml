@@ -16,37 +16,37 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Odoo 14.0 - Python 3.6
+          # Odoo 14.0 - Python 3.6 (OCA-CI)
           - odoo-version: "14.0"
             python-version: "3.6"
             postgres-version: "12"
             container: "ghcr.io/oca/oca-ci/py3.6-odoo14.0:latest"
 
-          # Odoo 15.0 - Python 3.8
+          # Odoo 15.0 - Python 3.8 (OCA-CI)
           - odoo-version: "15.0"
             python-version: "3.8"
             postgres-version: "13"
             container: "ghcr.io/oca/oca-ci/py3.8-odoo15.0:latest"
 
-          # Odoo 16.0 - Python 3.10
+          # Odoo 16.0 - Python 3.10 (OCA-CI)
           - odoo-version: "16.0"
             python-version: "3.10"
             postgres-version: "14"
             container: "ghcr.io/oca/oca-ci/py3.10-odoo16.0:latest"
 
-          # Odoo 17.0 - Python 3.11
+          # Odoo 17.0 - Python 3.10 (OCA-CI, NOT 3.11!)
           - odoo-version: "17.0"
-            python-version: "3.11"
+            python-version: "3.10"
             postgres-version: "15"
-            container: "ghcr.io/oca/oca-ci/py3.11-odoo17.0:latest"
+            container: "ghcr.io/oca/oca-ci/py3.10-odoo17.0:latest"
 
-          # Odoo 18.0 - Python 3.12
+          # Odoo 18.0 - Python 3.10 (OCA-CI, NOT 3.12!)
           - odoo-version: "18.0"
-            python-version: "3.12"
+            python-version: "3.10"
             postgres-version: "16"
-            container: "ghcr.io/oca/oca-ci/py3.12-odoo18.0:latest"
+            container: "ghcr.io/oca/oca-ci/py3.10-odoo18.0:latest"
 
-          # Odoo 19.0 - Python 3.10
+          # Odoo 19.0 - Python 3.10 (OCA-CI)
           - odoo-version: "19.0"
             python-version: "3.10"
             postgres-version: "17"
@@ -135,8 +135,8 @@ jobs:
               models = client.get_models()
               print(f'✅ Retrieved {len(models)} models')
 
-              # Test res.partner
-              partners = client.execute_method('res.partner', 'search_read', [], {'limit': 5})
+              # Test res.partner - limit as argument, not in kwargs
+              partners = client.search_read('res.partner', [], limit=5)
               print(f'✅ Retrieved {len(partners)} partners')
 
               print('✅ All tests passed for Odoo ${{ matrix.odoo-version }}!')
@@ -149,13 +149,14 @@ jobs:
           "
 
   test-odoo-docker:
-    name: Test with Odoo ${{ matrix.version }} (Docker)
+    name: Test with Odoo ${{ matrix.version }} (Docker - Fallback)
     runs-on: ubuntu-latest
+    if: false # Disabled - using OCA-CI for all versions above
 
     strategy:
       fail-fast: false
       matrix:
-        version: ["16", "17", "18", "19"]
+        version: ["latest"]
 
     services:
       postgres:
@@ -240,8 +241,8 @@ jobs:
               models = client.get_models()
               print(f'✅ Retrieved {len(models)} models')
 
-              # Test res.partner
-              partners = client.execute_method('res.partner', 'search_read', [], {'limit': 5})
+              # Test res.partner - limit as argument, not in kwargs
+              partners = client.search_read('res.partner', [], limit=5)
               print(f'✅ Retrieved {len(partners)} partners')
 
           except Exception as e:
