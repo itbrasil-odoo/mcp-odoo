@@ -41,7 +41,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 # Create MCP server
 mcp = FastMCP(
     "Odoo MCP Server",
-    description="MCP Server for interacting with Odoo ERP systems",
+    instructions="MCP Server for interacting with Odoo ERP systems",
     dependencies=["requests"],
     lifespan=app_lifespan,
 )
@@ -75,7 +75,7 @@ def get_model_info(model_name: str) -> str:
     try:
         # Get model info
         model_info = odoo_client.get_model_info(model_name)
-        
+
         if "error" in model_info:
             return json.dumps(model_info, indent=2)
 
@@ -110,8 +110,7 @@ def get_record(model_name: str, record_id: str) -> str:
         record = odoo_client.read_records(model_name, [record_id_int])
         if not record:
             return json.dumps(
-                {"error": f"Record not found: {model_name} ID {record_id}"},
-                indent=2
+                {"error": f"Record not found: {model_name} ID {record_id}"}, indent=2
             )
         return json.dumps(record[0], indent=2)
     except Exception as e:
@@ -450,3 +449,240 @@ def search_holidays(
 
     except Exception as e:
         return SearchHolidaysResponse(success=False, error=str(e))
+
+
+# ----- Data Models for Server Management -----
+
+
+@dataclass
+class OdooServerStatus:
+    """Status of the Odoo server"""
+
+    running: bool
+    pid: Optional[int] = None
+    url: str = "http://localhost:8069"
+    database: str = "odoo"
+    port: int = 8069
+
+
+@dataclass
+class OdooServerResponse:
+    """Response for Odoo server operations"""
+
+    success: bool
+    status: Optional[OdooServerStatus] = None
+    message: str = ""
+    error: Optional[str] = None
+
+
+# ----- MCP Tool for Server Management -----
+
+
+@mcp.tool(description="Check Odoo server status and optionally start it")
+def manage_odoo_server(
+    ctx: Any,
+    action: str = "status",
+    config_file: Optional[str] = None,
+    python_path: Optional[str] = None,
+    odoo_bin_path: Optional[str] = None,
+) -> OdooServerResponse:
+    """
+    Manage Odoo server (check status, start, stop)
+
+    Parameters:
+        action: Action to perform ('status', 'start', 'stop')
+        config_file: Path to Odoo config file
+                     (optional, uses default if not provided)
+        python_path: Path to Python executable (optional)
+        odoo_bin_path: Path to odoo-bin script (optional)
+
+    Returns:
+        OdooServerResponse with operation result
+    """
+    import os
+    import signal
+    import subprocess
+    import time
+
+    default_config = os.getenv("ODOO_CONFIG_FILE", "odoo.conf")
+    default_python = os.getenv("ODOO_PYTHON_PATH", "python")
+    default_odoo_bin = os.getenv("ODOO_BIN_PATH", "odoo-bin")
+
+    # Odoo server connection settings
+    odoo_url = os.getenv("ODOO_URL", "http://localhost:8069")
+    odoo_db = os.getenv("ODOO_DB", "odoo")
+    odoo_port = int(os.getenv("ODOO_PORT", "8069"))
+
+    config_file = config_file or default_config
+    python_path = python_path or default_python
+    odoo_bin_path = odoo_bin_path or default_odoo_bin
+
+    try:
+
+        def check_odoo_status():
+            try:
+                result = subprocess.run(
+                    ["pgrep", "-f", "odoo-bin"],
+                    capture_output=True,
+                    text=True,
+                )
+                pid = int(result.stdout.strip()) if result.stdout.strip() else None
+                import requests
+
+                try:
+                    health_url = f"{odoo_url}/web/health"
+                    response = requests.get(health_url, timeout=5)
+                    running = response.status_code == 200
+                except Exception:
+                    running = False
+
+                return OdooServerStatus(
+                    running=running,
+                    pid=pid,
+                    url=odoo_url,
+                    database=odoo_db,
+                    port=odoo_port,
+                )
+            except Exception:
+                return OdooServerStatus(
+                    running=False,
+                    pid=None,
+                    url=odoo_url,
+                    database=odoo_db,
+                    port=odoo_port,
+                )
+
+        if action == "status":
+            status = check_odoo_status()
+            message = f"Odoo server is " f"{'running' if status.running else 'stopped'}"
+            if status.pid:
+                message += f" (PID: {status.pid})"
+
+            return OdooServerResponse(success=True, status=status, message=message)
+
+        elif action == "start":
+            # Check if already running
+            status = check_odoo_status()
+            if status.running:
+                return OdooServerResponse(
+                    success=True,
+                    status=status,
+                    message=(f"Odoo server is already running " f"(PID: {status.pid})"),
+                )
+
+            # Start Odoo server
+            if not os.path.exists(config_file):
+                return OdooServerResponse(
+                    success=False,
+                    message=f"Config file not found: {config_file}",
+                    error="Config file missing",
+                )
+
+            if not os.path.exists(python_path):
+                return OdooServerResponse(
+                    success=False,
+                    message=f"Python executable not found: {python_path}",
+                    error="Python path missing",
+                )
+
+            if not os.path.exists(odoo_bin_path):
+                return OdooServerResponse(
+                    success=False,
+                    message=f"Odoo binary not found: {odoo_bin_path}",
+                    error="Odoo binary missing",
+                )
+
+            cmd = [
+                python_path,
+                odoo_bin_path,
+                "-c",
+                config_file,
+                "--dev=all",
+            ]
+
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=os.setsid,
+            )
+
+            # Wait a moment and check if it started
+            time.sleep(3)
+            new_status = check_odoo_status()
+
+            if new_status.running:
+                return OdooServerResponse(
+                    success=True,
+                    status=new_status,
+                    message=(
+                        f"Odoo server started successfully " f"(PID: {new_status.pid})"
+                    ),
+                )
+            else:
+                return OdooServerResponse(
+                    success=False,
+                    status=new_status,
+                    message="Failed to start Odoo server",
+                    error="Server did not start properly",
+                )
+
+        elif action == "stop":
+            status = check_odoo_status()
+            if not status.running:
+                return OdooServerResponse(
+                    success=True,
+                    status=status,
+                    message="Odoo server is already stopped",
+                )
+
+            if status.pid:
+                try:
+                    os.killpg(os.getpgid(status.pid), signal.SIGTERM)
+                    time.sleep(2)
+                    new_status = check_odoo_status()
+                    if not new_status.running:
+                        return OdooServerResponse(
+                            success=True,
+                            status=new_status,
+                            message="Odoo server stopped successfully",
+                        )
+                    else:
+                        os.killpg(os.getpgid(status.pid), signal.SIGKILL)
+                        time.sleep(1)
+                        final_status = check_odoo_status()
+                        return OdooServerResponse(
+                            success=True,
+                            status=final_status,
+                            message="Odoo server force stopped",
+                        )
+                except Exception as e:
+                    return OdooServerResponse(
+                        success=False,
+                        status=status,
+                        message=f"Failed to stop Odoo server: {str(e)}",
+                        error=str(e),
+                    )
+            else:
+                return OdooServerResponse(
+                    success=False,
+                    status=status,
+                    message="Could not determine Odoo process ID",
+                    error="PID not found",
+                )
+
+        else:
+            return OdooServerResponse(
+                success=False,
+                message=(
+                    f"Unknown action: {action}. " "Use 'status', 'start', or 'stop'"
+                ),
+                error="Invalid action",
+            )
+
+    except Exception as e:
+        return OdooServerResponse(
+            success=False,
+            message=f"Error managing Odoo server: {str(e)}",
+            error=str(e),
+        )
